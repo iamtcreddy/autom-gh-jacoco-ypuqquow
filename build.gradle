@@ -39,3 +39,46 @@ jacocoTestReport {
         csv.required.set(false)
     }
 }
+
+// Multi-module coverage scenario: each subproject produces its own
+// jacocoTestReport.xml under <module>/build/reports/jacoco/test/. The pipeline
+// template uploads every discovered XML, and the server must key each module's
+// files by repo-relative path (app/src/..., lib/src/...) without collisions.
+subprojects {
+    apply plugin: 'java-library'
+    apply plugin: 'jacoco'
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(17)
+        }
+    }
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        testImplementation platform('org.junit:junit-bom:5.10.2')
+        testImplementation 'org.junit.jupiter:junit-jupiter'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    }
+
+    test {
+        useJUnitPlatform()
+        finalizedBy jacocoTestReport
+    }
+
+    jacoco {
+        toolVersion = '0.8.11'
+    }
+
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required.set(true)
+            html.required.set(false)
+            csv.required.set(false)
+        }
+    }
+}
