@@ -54,6 +54,73 @@ public class UserHandler {
         return new ApiResponse(201, user);
     }
 
+    public ApiResponse updateUser(String method, String pathId, User payload) {
+        if (!"PUT".equalsIgnoreCase(method)) {
+            return new ApiResponse(405, "Method not allowed");
+        }
+        Integer id = parseId(pathId);
+        if (id == null) {
+            return new ApiResponse(400, "Invalid user ID");
+        }
+        if (!users.containsKey(id)) {
+            return new ApiResponse(404, "User not found");
+        }
+        if (payload == null) {
+            return new ApiResponse(400, "Invalid request body");
+        }
+        payload.setId(id);
+        if (!payload.validate()) {
+            return new ApiResponse(400, "Invalid user data");
+        }
+        users.put(id, payload);
+        return new ApiResponse(200, payload);
+    }
+
+    public ApiResponse searchUsersByName(String method, String query) {
+        if (!"GET".equalsIgnoreCase(method)) {
+            return new ApiResponse(405, "Method not allowed");
+        }
+        if (query == null || query.isEmpty()) {
+            return new ApiResponse(400, "Query is required");
+        }
+        String needle = query.toLowerCase();
+        List<User> matches = new ArrayList<>();
+        for (User user : users.values()) {
+            if (user.getName() == null) {
+                continue;
+            }
+            if (user.getName().toLowerCase().contains(needle)) {
+                matches.add(user);
+            }
+        }
+        return new ApiResponse(200, matches);
+    }
+
+    public ApiResponse getUsersByEmailDomain(String method, String domain) {
+        if (!"GET".equalsIgnoreCase(method)) {
+            return new ApiResponse(405, "Method not allowed");
+        }
+        if (domain == null || domain.isEmpty()) {
+            return new ApiResponse(400, "Domain is required");
+        }
+        String suffix = "@" + domain.toLowerCase();
+        List<User> matches = new ArrayList<>();
+        for (User user : users.values()) {
+            String email = user.getEmail();
+            if (email == null) {
+                continue;
+            }
+            if (email.toLowerCase().endsWith(suffix)) {
+                matches.add(user);
+            }
+        }
+        return new ApiResponse(200, matches);
+    }
+
+    public int count() {
+        return users.size();
+    }
+
     protected Integer parseId(String value) {
         if (value == null || value.isEmpty()) {
             return null;
