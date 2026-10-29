@@ -34,7 +34,6 @@ class UserHandlerTest {
 
         assertEquals(200, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertTrue(response.getBody() instanceof User);
         User user = (User) response.getBody();
         assertEquals("Alice", user.getName());
     }
@@ -76,5 +75,74 @@ class UserHandlerTest {
         ApiResponse response = handler.createUser("POST", dup);
 
         assertEquals(409, response.getStatusCode());
+    }
+
+    @Test
+    void updateUserOverwritesExistingUser() {
+        UserHandler handler = new UserHandler();
+        handler.getUsers().put(1, new User(1, "Alice", "alice@example.com"));
+
+        User update = new User(0, "Alice Updated", "alice.updated@example.com");
+        ApiResponse response = handler.updateUser("PUT", "1", update);
+
+        assertEquals(200, response.getStatusCode());
+        User updated = handler.getUsers().get(1);
+        assertEquals("Alice Updated", updated.getName());
+    }
+
+    @Test
+    void updateUserReturns404ForMissingUser() {
+        UserHandler handler = new UserHandler();
+        User update = new User(0, "Bob", "bob@example.com");
+
+        ApiResponse response = handler.updateUser("PUT", "999", update);
+
+        assertEquals(404, response.getStatusCode());
+    }
+
+    @Test
+    void searchUsersByNameReturnsMatching() {
+        UserHandler handler = new UserHandler();
+        handler.getUsers().put(1, new User(1, "Alice", "alice@example.com"));
+        handler.getUsers().put(2, new User(2, "Bob", "bob@example.com"));
+        handler.getUsers().put(3, new User(3, "Alicia", "alicia@example.com"));
+
+        ApiResponse response = handler.searchUsersByName("GET", "ali");
+
+        assertEquals(200, response.getStatusCode());
+        List<?> body = (List<?>) response.getBody();
+        assertEquals(2, body.size());
+    }
+
+    @Test
+    void searchUsersByNameRejectsEmptyQuery() {
+        UserHandler handler = new UserHandler();
+
+        ApiResponse response = handler.searchUsersByName("GET", "");
+
+        assertEquals(400, response.getStatusCode());
+    }
+
+    @Test
+    void getUsersByEmailDomainFiltersByDomain() {
+        UserHandler handler = new UserHandler();
+        handler.getUsers().put(1, new User(1, "Alice", "alice@example.com"));
+        handler.getUsers().put(2, new User(2, "Bob", "bob@other.com"));
+        handler.getUsers().put(3, new User(3, "Carol", "carol@example.com"));
+
+        ApiResponse response = handler.getUsersByEmailDomain("GET", "example.com");
+
+        assertEquals(200, response.getStatusCode());
+        List<?> body = (List<?>) response.getBody();
+        assertEquals(2, body.size());
+    }
+
+    @Test
+    void countReturnsSize() {
+        UserHandler handler = new UserHandler();
+        assertEquals(0, handler.count());
+        handler.getUsers().put(1, new User(1, "Alice", "alice@example.com"));
+        handler.getUsers().put(2, new User(2, "Bob", "bob@example.com"));
+        assertEquals(2, handler.count());
     }
 }
